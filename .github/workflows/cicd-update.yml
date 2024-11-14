@@ -78,7 +78,7 @@ jobs:
             "head": "${{ github.head_ref }}",
             "base": "main"
           }' > /dev/null 2>&1; then
-          echo "PR opened successfully."
+          echo "PR open successfully."
           else
             echo "Branch created but PR could not be open"
           fi
