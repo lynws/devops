@@ -1,0 +1,63 @@
+name: Continuous Build
+on:
+  workflow_call:
+
+env:
+  AWS_USERNAME: AWS
+
+jobs:
+  Build-Test-Check:
+    runs-on: [ ubuntu-22.04 ]
+
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Configure Workspace
+        uses: lynws/devops/.github/actions/git-config@main
+
+      - name: Build
+        run: gradle build -x test
+
+      - name: Test
+        id: test
+        run: gradle test
+
+      - name: Tests Decorator
+        if: always() && steps.test.conclusion == 'failure' && github.event_name == 'pull_request'
+        uses: mshick/add-pr-comment@v2.8.1
+        with:
+          repo-token: ${{ github.token }}
+          message: |
+            :bangbang: Hey, your TESTS were FAILED.
+
+      - name: Publish Tests
+        if: always() && steps.test.conclusion == 'failure' && github.event_name == 'pull_request'
+        uses: phoenix-actions/test-reporting@v12
+        with:
+          name: Failed Test
+          path: "**/build/test-results/test/TEST-*.xml"
+          reporter: java-junit
+
+      - name: Teams Notification
+        if: always() && github.ref_name == 'master'
+        run: echo todo notification teams status
+        shell: bash
+
+      - name: Workspace Clean
+        if: always()
+        run: find . -mindepth 1 -maxdepth 1 -exec rm -rf {} + || true

@@ -1,0 +1,13 @@
+name: Configure Git User
+
+description: "Setup local account"
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        git config --global user.name "GitHub Actions"
+        git config --global user.username "github-actions"
+        git config --global user.email "lynws@test.com"
+      shell: bash
+

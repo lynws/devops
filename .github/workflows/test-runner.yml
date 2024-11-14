@@ -1,0 +1,24 @@
+name: CI/CD Test
+
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+      - fix/*
+
+jobs:
+  Test:
+    runs-on: [ ubuntu-22.04 ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: TEST
+        run: echo "\033[0;32mTesting ok...\033[0m"
+

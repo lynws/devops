@@ -1,0 +1,48 @@
+name: ECS Restart
+on:
+  workflow_call:
+    inputs:
+      SERVICE_NAME:
+        description: 'MicroService Name'
+        required: true
+        type: string
+      ENVIRONMENT:
+        description: 'AWS Environment'
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        description: 'AWS Access Key'
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        description: 'AWS Secret Access Key'
+        required: true
+env:
+  AWS_REGION: eu-central-1
+
+jobs:
+  Restart:
+    runs-on: [ ubuntu-22.04 ]
+    environment: ${{ inputs.ENVIRONMENT }}
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v3
+
+      - name: Configure Credentials
+        run: |
+          aws configure set region ${{ env.AWS_REGION }}
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        shell: bash
+
+      - name: Restart App
+        run: aws ecs update-service --cluster test-${{ inputs.ENVIRONMENT }}-services --service ${{ inputs.SERVICE_NAME }} --force-new-deployment > /dev/null 2>&1
+        shell: bash
+
+      - name: Health Check Status
+        run: aws ecs wait services-stable --cluster test-${{ inputs.ENVIRONMENT }}-services --services ${{ inputs.SERVICE_NAME }}
+        shell: bash
+
+      - name: Workspace Clean
+        if: always()
+        run: find . -mindepth 1 -maxdepth 1 -exec rm -rf {} + || true

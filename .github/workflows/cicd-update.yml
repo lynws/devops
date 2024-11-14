@@ -1,0 +1,90 @@
+name: Update Workflows to Repositories
+on:
+  pull_request:
+    types: [ closed ]
+    paths:
+      - '.github/reusable/backend/**'
+permissions: write-all
+
+jobs:
+  Check-Changes:
+    runs-on: [ ubuntu-22.04 ]
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no_update')
+    outputs:
+      repository: ${{ steps.repos.outputs.value }}
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v3
+        with:
+         fetch-depth: 0
+
+      - name: Save folder name
+        id: repos
+        run: echo "value=${{ vars.BE_REPOS }}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Teams Notification
+        if: always() && steps.repos.conclusion == 'failure'
+        run: echo todo notification teams status
+        shell: bash
+
+      - name: Workspace Clean
+        if: always()
+        run: find . -mindepth 1 -maxdepth 1 -exec rm -rf {} + || true
+
+  Open-PR:
+    needs: [ Check-Changes ]
+    runs-on: [ self-hosted-ec2 ]
+    strategy:
+      matrix:
+        repo: ${{ fromJson(needs.Check-Changes.outputs.repository) }}
+      fail-fast: false
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Checkout Branch
+        uses: actions/checkout@v3
+        with:
+          repository: lynws/${{ matrix.repo }}
+          token: ${{ secrets.GIT_PAT }}
+          fetch-depth: 0
+          ref: main
+          path: ${{ matrix.repo }}
+
+      - name: Configure github user
+        uses: lynws/devops/.github/actions/git-config@main
+
+      - name: Add changes to Repository
+        id: git
+        run: |
+          cd ${{ matrix.repo }} && git switch -c ${{ github.head_ref }}
+            cp -rf ../.github/reusable/backend/* .github/workflows/
+          git add . 
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "${{ github.event.pull_request.title }}" && git push origin -f ${{ github.head_ref }}
+          fi
+        shell: bash
+
+      - name: Open Pull Request
+        run: |
+          curl -s -X POST -H "Authorization: Bearer ${{ secrets.GIT_PAT }}" -H "Accept: application/vnd.github.v3+json" \
+          ${{ github.api_url }}/repos/${{ matrix.repo }}/pulls \
+          -d '{
+            "title": "${{ github.event.pull_request.title }}",
+            "head": "${{ github.head_ref }}",
+            "base": "main"
+          }' > /dev/null 2>&1
+        shell: bash
+
+      - name: Teams Notification
+        if: always() && steps.git.conclusion == 'failure'
+        run: echo todo notification teams status
+        shell: bash
+
+      - name: Workspace Clean
+        if: always()
+        run: find . -mindepth 1 -maxdepth 1 -exec rm -rf {} + || true

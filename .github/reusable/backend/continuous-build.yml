@@ -1,0 +1,23 @@
+name: Continuous Build
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [ opened, reopened, edited, synchronize ]
+    branches:
+      - main
+      - epic/*
+      - feature/*
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions: write-all
+
+jobs:
+  Microservice:
+    uses: lynws/devops/.github/workflows/continuous-build.yml@main
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+

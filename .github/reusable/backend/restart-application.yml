@@ -1,0 +1,24 @@
+name: Restart AWS Microservice
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Choose Environment, default "dev"'
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - int
+          - prod
+permissions: write-all
+
+jobs:
+  Application:
+    uses: lynws/devops/.github/workflows/restart-deploy.yml@main
+    with:
+      SERVICE_NAME: ${{ vars.SERVICE_NAME }}
+      ENVIRONMENT: ${{ inputs.env }}
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
