@@ -34,7 +34,7 @@ jobs:
 
   Open-PR:
     needs: [ Check-Changes ]
-    runs-on: [ self-hosted-ec2 ]
+    runs-on: [ ubuntu-22.04 ]
     strategy:
       matrix:
         repo: ${{ fromJson(needs.Check-Changes.outputs.repository) }}
