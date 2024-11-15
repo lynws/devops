@@ -10,6 +10,7 @@ on:
         options:
           - dev
           - int
+          - pre-prod
           - prod
 permissions: write-all
 
